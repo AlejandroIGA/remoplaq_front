@@ -1,0 +1,26 @@
+.container{
+    width: 100%;
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: .5fr 1fr 1fr;
+    grid-template-rows: 100px 1fr;
+    grid-template-areas: "header header header"
+                         "sidebar main main";
+}
+
+body{
+    margin: 0;
+}
+
+header{
+    grid-area: header;
+}
+
+aside{
+    grid-area: sidebar;
+}
+
+main{
+    grid-area: main;
+    padding: 10px;
+}
