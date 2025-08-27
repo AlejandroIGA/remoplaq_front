@@ -111,6 +111,25 @@ const Materiales = () => {
         });
     };
 
+    const handleSearch = async () => {
+        if (busqueda.trim() === "") {
+            getMateriales();
+            return;
+        }
+
+        const response = await materialService.search(busqueda, filtro);
+
+        if (response.status === 200 && response.data.length !== 0) {
+            setMateriales(response.data);
+        } else if (response.data.length == 0) {
+            messageApi.info("No se encontraron resultados");
+            setMateriales([]);
+        }
+        else {
+            messageApi.error(response.data);
+        }
+    }
+
     const clearForm = () => {
         setEditData(null);
         setIsEditting(false);
@@ -167,7 +186,7 @@ const Materiales = () => {
             <div>
                 {contextHolder}
                 <h2>Materiales</h2>
-                <div>
+                <div style={{marginBottom: "10px"}}>
                     <Input.Search
                     placeholder={`Buscar por ${filtro}`}
                     value={busqueda}
