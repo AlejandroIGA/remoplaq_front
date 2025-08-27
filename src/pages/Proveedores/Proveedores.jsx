@@ -1,4 +1,4 @@
-import SideBar from "../../components/SideBar"
+import "./proveedores.css"
 import Layout from "../../components/Layout/Layout"
 import { useState, useEffect } from "react"
 import { Table, Button, message, App, Input, Radio } from "antd";
@@ -9,7 +9,6 @@ import proveedorService from "../../services/proveedorService";
 const Proveedores = () => {
     const { modal } = App.useApp();
 
-
     const [proveedores, setProveedores] = useState([]);
     const [editData, setEditData] = useState(null);
     const [isEditting, setIsEditting] = useState(false)
@@ -19,14 +18,34 @@ const Proveedores = () => {
 
     const [messageApi, contextHolder] = message.useMessage();
 
-    const getProveedores = async () => {
-        const response = await proveedorService.getAll();
+    const [pagination, setPagination] = useState({
+        page: 0,
+        size: 10,
+        totalElements: 0,
+    });
+
+    const getProveedores = async (page = 0, size = 10, busqueda = '', filtro = 'nombre') => {
+        let response;
+        if (busqueda.trim() === "") {
+            response = await proveedorService.getAll(page, size);
+        } else {
+            response = await proveedorService.search(busqueda, filtro, page, size);
+        }
         if (response.status === 200) {
-            setProveedores(response.data);
+            setProveedores(response.data.content);
+            setPagination(prev => ({
+                ...prev,
+                totalElements: response.data.totalElements,
+                page: response.data.number
+            }))
         } else {
             messageApi.error(response.data);
         }
     }
+
+    const handleTableChange = (page) => {
+        getProveedores(page.current - 1, page.pageSize, busqueda, filtro);
+    };
 
     const editRecord = async (id) => {
         const response = await proveedorService.getById(id);
@@ -96,27 +115,14 @@ const Proveedores = () => {
     };
 
     const handleSearch = async () => {
-        if (busqueda.trim() === "") {
-            getProveedores();
-            return;
-        }
-
-        const response = await proveedorService.search(busqueda, filtro);
-
-        if (response.status === 200 && response.data.length !== 0) {
-            setProveedores(response.data);
-        } else if (response.data.length == 0) {
-            messageApi.info("No se encontraron resultados");
-            setProveedores([]);
-        }
-        else {
-            messageApi.error(response.data);
-        }
+        getProveedores(0, pagination.size, busqueda, filtro);
     }
 
     const clearForm = () => {
         setEditData(null);
         setIsEditting(false);
+        setBusqueda("");
+        setFiltro("nombre")
     }
 
     const columnas = [
@@ -151,7 +157,7 @@ const Proveedores = () => {
     ];
 
     useEffect(() => {
-        getProveedores();
+        getProveedores(0,pagination.size);
     }, [])
 
     return (
@@ -190,7 +196,9 @@ const Proveedores = () => {
                                 </Radio.Group>
                             </div>
                             <ProveedorForm onSubmit={save} editData={editData} isEditting={isEditting} clearForm={clearForm} isSaveSucces={isSaveSuccess} />
-                            <Table columns={columnas} dataSource={proveedores} rowKey="id" pagination={{ pageSize: 10 }} />
+                            <div className="table-div">
+                                <Table columns={columnas} dataSource={proveedores} rowKey="id" pagination={{ current: pagination.page + 1, pageSize: pagination.size, total: pagination.totalElements}} onChange={handleTableChange}/>
+                            </div>
                         </div>
                     </div>
                 </div>

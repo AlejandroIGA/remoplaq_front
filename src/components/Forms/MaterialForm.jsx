@@ -163,7 +163,7 @@ const MaterialForm = ({ saveMaterial, editData, clearForm, isEditting, isSaveSuc
                         { max: 200, message: 'La descripción no puede exceder los 200 caracteres' }
                     ]}
                 >
-                    <Input placeholder="Descripción" />
+                    <Input placeholder="Descripción" showCount maxLength={200} />
                 </Form.Item>
 
                 <Form.Item name="select" label="Proveedores" rules={[{ required: false }]}>
