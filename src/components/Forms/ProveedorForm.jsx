@@ -1,8 +1,7 @@
 import { Input, Button, Radio, Table, Typography, Form, ConfigProvider, Modal, Checkbox, Space, Tag } from 'antd';
 import { useEffect } from 'react';
-import { useState } from 'react';
 
-const ProveedorForm = ({onSubmit, editData, clearForm, isEditting}) => {
+const ProveedorForm = ({onSubmit, editData, clearForm, isEditting, isSaveSucces}) => {
     const [form] = Form.useForm();
 
     useEffect(() => {
@@ -13,11 +12,16 @@ const ProveedorForm = ({onSubmit, editData, clearForm, isEditting}) => {
         }
     });
 
+    useEffect(() => {
+        if (isSaveSucces) {
+            form.resetFields();
+        }
+    }, [isSaveSucces]);
+
     const handleSubmit = () => {
         form.validateFields()
             .then(values => {
                 onSubmit(values);
-                form.resetFields();
             })
             .catch(info => {
                 console.log('Validate Failed:', info);
@@ -34,14 +38,20 @@ const ProveedorForm = ({onSubmit, editData, clearForm, isEditting}) => {
                 <Form.Item
                     label="Nombre"
                     name="nombre"
-                    rules={[{ required: true, message: 'Por favor ingresa el nombre del proveedor' }]}
+                    rules={[{ required: true, message: 'Por favor ingresa el nombre del proveedor' },
+                        {min: 3, message: 'El nombre debe tener al menos 3 caracteres'},
+                        {max: 50, message: 'El nombre no debe exceder los 50 caracteres'}
+                    ]}
                 >
                     <Input placeholder="Nombre del proveedor" />
                 </Form.Item>
                 <Form.Item
                     label="Teléfono"
                     name="telefono"
-                    rules={[{ required: true, message: 'Por favor ingresa el teléfono del proveedor' }]}
+                    rules={[{ required: true, message: 'Por favor ingresa el teléfono del proveedor' },
+                        {min:10, message: 'El teléfono debe tener al menos 10 caracteres'},
+                        {max:10, message: 'El teléfono no debe exceder los 10 caracteres'},
+                    ]}
                 >
                     <Input placeholder="Teléfono del proveedor" />
                 </Form.Item>
