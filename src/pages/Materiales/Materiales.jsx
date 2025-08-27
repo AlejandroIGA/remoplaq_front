@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Table, Button, message, App, Input, Radio,  } from "antd";
+import { Table, Button, message, App, Input, Radio, } from "antd";
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 
 import MaterialForm from "../../components/Forms/MaterialForm";
@@ -21,17 +21,36 @@ const Materiales = () => {
     const [isEditting, setIsEditting] = useState(false)
     const [isSaveSuccess, setIsSaveSuccess] = useState(false);
 
-    const getMateriales = async () => {
-        const response = await materialService.getAll();;
+    const [pagination, setPagination] = useState({
+        page: 0,
+        size: 10,
+        totalElements: 0,
+    });
+
+    const getMateriales = async (page = 0, size = 10, busqueda = '', filtro = 'nombre') => {
+        let response;
+        if (busqueda.trim() === "") {
+            response = await materialService.getAll(page, size);
+        } else {
+            response = await materialService.search(busqueda, filtro, page, size);
+        }
+
         if (response.status === 200) {
-            setMateriales(response.data);
+            // Update the state with the data from the current page
+            setMateriales(response.data.content);
+            // Update pagination info from the backend response
+            setPagination(prev => ({
+                ...prev,
+                totalElements: response.data.totalElements,
+                page: response.data.number,
+            }));
         } else {
             messageApi.error(response.data);
         }
-    }
+    };
 
     const saveMaterial = async (data) => {
-        
+
         const materialData = {
             codigo: data.codigo,
             descripcion: data.descripcion,
@@ -39,21 +58,21 @@ const Materiales = () => {
             unidad_medida: data.unidad_medida,
         }
 
-        const responseMaterial = 
-            isEditting == true 
-                ? await materialService.edit(editData.id, materialData) 
+        const responseMaterial =
+            isEditting == true
+                ? await materialService.edit(editData.id, materialData)
                 : await materialService.save(materialData);
 
         if (responseMaterial.status == 200) {
 
             messageApi.success(`Material ${isEditting == true ? "actualizado" : "registrado"} correctamente`);
-            const responseRelations = 
-                isEditting == true 
+            const responseRelations =
+                isEditting == true
                     ? await materialService.editRelations(responseMaterial.data.id, data.proveedores, data.proveedoresEliminar)
                     : await materialService.saveRelations(responseMaterial.data.id, data.proveedores);
-            
+
             if (responseRelations.status === 200) {
-                
+
                 messageApi.success(`Relaciones entre material y proveedor ${isEditting == true ? "actualizadas" : "registradas"} correctamente`);
 
                 getMateriales();
@@ -63,7 +82,7 @@ const Materiales = () => {
             } else {
                 messageApi.error(responseRelations.data);
             }
-        }else {
+        } else {
             messageApi.error(responseMaterial.data);
         }
 
@@ -112,110 +131,108 @@ const Materiales = () => {
     };
 
     const handleSearch = async () => {
-        if (busqueda.trim() === "") {
-            getMateriales();
-            return;
-        }
-
-        const response = await materialService.search(busqueda, filtro);
-
-        if (response.status === 200 && response.data.length !== 0) {
-            setMateriales(response.data);
-        } else if (response.data.length == 0) {
-            messageApi.info("No se encontraron resultados");
-            setMateriales([]);
-        }
-        else {
-            messageApi.error(response.data);
-        }
+        getMateriales(0, pagination.size, busqueda, filtro);
     }
+
+    const handleTableChange = (page) => {
+        getMateriales(page.current - 1, page.pageSize, busqueda, filtro);
+    };
 
     const clearForm = () => {
         setEditData(null);
         setIsEditting(false);
+        setFiltro("nombre");
+        setBusqueda("");
     }
 
     const columnas = [
-            { title: 'Código', dataIndex: 'codigo', key: 'codigo' },
-            { title: 'Unidad de medida', dataIndex: 'unidad_medida', key: 'unidad_medida' },
-            { title: 'Nombre', dataIndex: 'nombre', key: 'nombre' },
-            { title: 'Descripción', dataIndex: 'descripcion', key: 'descripcion' },
-            {
-                title: 'Acciones',
-                key: 'acciones',
-                width: 200,
-                render: (text, record) => (
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                        <Button
-                            onClick={() => editMaterial(record.id)}
-                            className="boton-editar"
-                            icon={<EditOutlined />}
-                            size="small"
-                            disabled = {
-                                isEditting == true
+        { title: 'Código', dataIndex: 'codigo', key: 'codigo' },
+        { title: 'Unidad de medida', dataIndex: 'unidad_medida', key: 'unidad_medida' },
+        { title: 'Nombre', dataIndex: 'nombre', key: 'nombre' },
+        { title: 'Descripción', dataIndex: 'descripcion', key: 'descripcion' },
+        {
+            title: 'Acciones',
+            key: 'acciones',
+            width: 200,
+            render: (text, record) => (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <Button
+                        onClick={() => editMaterial(record.id)}
+                        className="boton-editar"
+                        icon={<EditOutlined />}
+                        size="small"
+                        disabled={
+                            isEditting == true
                                 ? record.id != editData.id ? true : false
                                 : false
-                            }
-                        >
-                            Editar
-                        </Button>
-                        <Button
-                            onClick={() => deleteMaterial(record.id, record.nombre)}
-                            icon={<DeleteOutlined />}
-                            size="small"
-                            className="boton-eliminar"
-                            disabled = {
-                                isEditting == true
+                        }
+                    >
+                        Editar
+                    </Button>
+                    <Button
+                        onClick={() => deleteMaterial(record.id, record.nombre)}
+                        icon={<DeleteOutlined />}
+                        size="small"
+                        className="boton-eliminar"
+                        disabled={
+                            isEditting == true
                                 ? record.id != editData.id ? true : false
                                 : false
-                            }
-                        >
-                            Eliminar
-                        </Button>
-                    </div>
-                )
-            }
-        ];
-    
-        useEffect(() => {
-            getMateriales();
-        }, []);
-    return (
-       <Layout
-        main = {
-            <div>
-                {contextHolder}
-                <h2>Materiales</h2>
-                <div style={{marginBottom: "10px"}}>
-                    <Input.Search
-                    placeholder={`Buscar por ${filtro}`}
-                    value={busqueda}
-                    onChange={(e) => {
-                        setBusqueda(e.target.value);
-                    }}
-                    enterButton
-                    style={{ marginBottom: '10px' }}
-                    onSearch = {()=> handleSearch()}
-                />
-                <Radio.Group
-                    onChange={(e) => {
-                        setFiltro(e.target.value);
-                    }}
-                    value={filtro}
-                >
-                    <Radio value="nombre">Nombre</Radio>
-                    <Radio value="codigo">Código</Radio>
-                    <Radio value="proveedor">Proveedor</Radio>
-                </Radio.Group>
+                        }
+                    >
+                        Eliminar
+                    </Button>
                 </div>
-                <div>
-                    <MaterialForm saveMaterial={saveMaterial} editData={editData} isEditting={isEditting} clearForm={clearForm} isSaveSucces={isSaveSuccess}></MaterialForm>
-                    <Table columns={columnas} dataSource={materiales} rowKey="id" pagination={{ pageSize: 10 }} />
-                </div>
-                
-            </div>
+            )
         }
-       />
+    ];
+
+    useEffect(() => {
+        getMateriales(0, pagination.size, pagination.sort);
+    }, []);
+
+    return (
+        <Layout
+            main={
+                <div>
+                    {contextHolder}
+                    <h2>Materiales</h2>
+                    <div style={{ marginBottom: "10px" }}>
+                        <Input.Search
+                            placeholder={`Buscar por ${filtro}`}
+                            value={busqueda}
+                            onChange={(e) => {
+                                setBusqueda(e.target.value);
+                            }}
+                            enterButton
+                            style={{ marginBottom: '10px' }}
+                            onSearch={() => handleSearch()}
+                        />
+                        <Radio.Group
+                            onChange={(e) => {
+                                setFiltro(e.target.value);
+                            }}
+                            value={filtro}
+                        >
+                            <Radio value="nombre">Nombre</Radio>
+                            <Radio value="codigo">Código</Radio>
+                            <Radio value="proveedor">Proveedor</Radio>
+                        </Radio.Group>
+                    </div>
+                    <div>
+                        <MaterialForm saveMaterial={saveMaterial} editData={editData} isEditting={isEditting} clearForm={clearForm} isSaveSucces={isSaveSuccess}></MaterialForm>
+                        <Table columns={columnas} dataSource={materiales} rowKey="id" 
+                        pagination={{
+                            current: pagination.page + 1,
+                            pageSize: pagination.size,
+                            total: pagination.totalElements,
+                        }}
+                            onChange={handleTableChange} />
+                    </div>
+
+                </div>
+            }
+        />
     )
 }
 export default Materiales;

@@ -3,9 +3,9 @@ import axios from 'axios';
 const URL = "http://localhost:8085/api/material";
 
 const materialService = {
-    "getAll" : async() => {
+    "getAll" : async(page, size) => {
         try {
-            const response = await axios.get(`${URL}`)
+            const response = await axios.get(`${URL}?page=${page}&size=${size}`)
             return response;
         } catch (error) {
             if (error.code === "ERR_NETWORK") {
@@ -25,9 +25,9 @@ const materialService = {
             return error.response;
         }
     },
-    "search": async (param, type) => {
+    "search": async (param, type, page = 0, size = 10) => {
         try {
-            const response = await axios.get(`${URL}/search/${param}?type=${type}`);
+            const response = await axios.get(`${URL}/search/${param}?type=${type}&page=${page}&size=${size}`);
             return response;
         } catch (error) {
             if (error.code === "ERR_NETWORK") {

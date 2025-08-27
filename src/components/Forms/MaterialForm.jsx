@@ -1,5 +1,5 @@
 import { Input, Button, Form, Space, Select, Card, Switch, Col, Row } from 'antd';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import proveedorService from '../../services/proveedorService';
 
 const { Option } = Select;
@@ -11,13 +11,27 @@ const MaterialForm = ({ saveMaterial, editData, clearForm, isEditting, isSaveSuc
     const [proveedoresAgregar, setProveedoresAgregar] = useState([]);
     const [proveedoresEliminar, setProveedoresEliminar] = useState([]);
 
-    const getProveedores = async () => {
-        const response = await proveedorService.getAll();
+    const [fetching, setFetching] = useState(false);
+    const fetchTimeoutRef = useRef(null);
+
+    const getProveedores = async (param, type = "nombre", page = 0, size = 100) => {
+        setFetching(true);
+        const response = await proveedorService.search(param, type, page, size);
+        setFetching(false);
         if (response.status === 200) {
-            setProveedores(response.data);
+            setProveedores(response.data.content);
         } else {
             console.error('Error al obtener proveedores:', response.data);
         }
+    };
+
+    const handleSearch = (value) => {
+        if (fetchTimeoutRef.current) {
+            clearTimeout(fetchTimeoutRef.current);
+        }
+        fetchTimeoutRef.current = setTimeout(() => {
+            getProveedores(value);
+        }, 300); // Wait 300ms after the user stops typing
     };
 
     // Función para agregar un proveedor al estado de proveedores seleccionados
@@ -93,13 +107,9 @@ const MaterialForm = ({ saveMaterial, editData, clearForm, isEditting, isSaveSuc
             setProveedoresAgregar([]);
             setProveedoresEliminar([]);
             setProveedores([]);
-            getProveedores();
         }
-    }, [isSaveSucces, form]);
+    }, [isSaveSucces]);
 
-    useEffect(() => {
-        getProveedores();
-    }, []);
 
     const handleSubmit = () => {
         form.validateFields()
@@ -166,18 +176,22 @@ const MaterialForm = ({ saveMaterial, editData, clearForm, isEditting, isSaveSuc
                     <Input placeholder="Descripción" showCount maxLength={200} />
                 </Form.Item>
 
-                <Form.Item name="select" label="Proveedores" rules={[{ required: false }]}>
+                <Form.Item name="select" label="Proveedores">
                     <Select
-                        placeholder="Seleccione un proveedor"
+                        placeholder="Buscar y seleccionar un proveedor"
                         onChange={selectChange}
-                        value={null} // Limpia el valor seleccionado en el Select
+                        value={null}
                         allowClear
+                        showSearch
+                        filterOption={false}
+                        onSearch={handleSearch} // Trigger search on user input
+                        loading={fetching}
                     >
-                        {
-                            proveedores.map((prov) => (
-                                <Option key={prov.id} value={prov.id}>{prov.nombre}</Option>
-                            ))
-                        }
+                        {proveedores.map((prov) => (
+                            <Option key={prov.id} value={prov.id}>
+                                {prov.nombre}
+                            </Option>
+                        ))}
                     </Select>
                 </Form.Item>
 
